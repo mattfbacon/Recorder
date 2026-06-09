@@ -113,7 +113,12 @@ private fun ElapsedIndicator(recording: ActiveRecording, modifier: Modifier) {
 	val elapsed = produceState(Duration.ZERO) {
 		while (isActive) {
 			delay(1.seconds)
-			value = recording.duration
+			try {
+				value = recording.duration
+			} catch (_: IllegalStateException) {
+				// Recording ended.
+				break
+			}
 		}
 	}
 	Text(elapsed.value.toHumanDuration(), modifier)
@@ -124,7 +129,13 @@ private fun Visualizer(recording: ActiveRecording, modifier: Modifier) {
 	val samples = produceState(listOf<Float>(), recording.recorder) {
 		while (isActive) {
 			delay(100.milliseconds)
-			val sample = sqrt(recording.recorder.maxAmplitude / 32768f)
+			val amplitude = try {
+				recording.recorder.maxAmplitude
+			} catch (_: IllegalStateException) {
+				// Recording ended.
+				break
+			}
+			val sample = sqrt(amplitude/ 32768f)
 			value = Stream.concat(Stream.of(sample), value.stream()).limit(256)
 				.collect(Collectors.toList())
 		}
